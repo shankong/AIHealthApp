@@ -1,0 +1,67 @@
+/* 全局重置样式 */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 移除超链接下划线 */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 列表去样式 */
+ul, ol {
+  list-style: none;
+}
+
+/* 图片块级化，避免底部间隙 */
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* 按钮和输入框字体继承 */
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* 表格边框合并 */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* HTML5 元素块级化 */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+  display: block;
+}
+
+/* 全局默认样式 */
+html {
+  /* 让滚动更平滑 */
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 标题字体加粗 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+}
