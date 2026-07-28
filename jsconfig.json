@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "target": "ESNext",
+    "types": ["element-plus/global"]
+  },
+  "vueCompilerOptions": {
+    "target": 3.4
+  },
+  "include": ["src/**/*.js", "src/**/*.vue"]
+}
