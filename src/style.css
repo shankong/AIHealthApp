@@ -10,7 +10,6 @@
 /* 移除超链接下划线 */
 a {
   text-decoration: none;
-  color: inherit;
 }
 
 /* 列表去样式 */
@@ -58,6 +57,7 @@ body {
     'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
 }
 
 /* 标题字体加粗 */
