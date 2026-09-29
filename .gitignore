@@ -1,24 +1,26 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ==========================================================
+# 项目根目录的忽略规则
+#
+# 说明：frontend/ 和 backend/backend/ 里各自还有一份 .gitignore，
+#      它们管各自子目录里的东西（node_modules、dist、target 等）。
+#      这里放的是整个项目通用的规则。
+# ==========================================================
 
-node_modules
-dist
-dist-ssr
-*.local
+# ---------- IDE / 编辑器 ----------
+# IntelliJ IDEA 的工程文件，里面记录的是每台机器各自的绝对路径、
+# 窗口布局、个人检查配置，提交上去别人拉下来只会看到一堆莫名其妙的改动
+.idea/
+*.iml
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# VS Code 的个人设置。注意 frontend/.vscode/extensions.json 是
+# "推荐插件清单"，那个是有意提交的，所以这里只忽略 settings.json
+.vscode/settings.json
+backend/.vscode/
+
+# ---------- 操作系统生成的文件 ----------
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# ---------- 日志 ----------
+*.log
+logs/

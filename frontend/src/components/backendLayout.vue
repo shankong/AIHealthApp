@@ -1,3 +1,8 @@
+<script setup>
+import Sidebar from './Sidebar.vue'
+import Navbar from './Navbar.vue'
+</script>
+
 <template>
   <div class="backend-layout">
     <el-container class="main-container">
@@ -14,11 +19,6 @@
   </div>
 </template>
 
-<script setup>
-  import Sidebar from './Sidebar.vue'
-  import Navbar from './Navbar.vue'
-</script>
-
 <style lang="scss" scoped>
   .backend-layout {
     height: 100vh;
@@ -30,7 +30,6 @@
       .content-container{
         padding: 20px;
         background-color: #fff;
-        height: calc(100% - 60px);
       }
     }
   }

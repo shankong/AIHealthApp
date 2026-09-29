@@ -2,6 +2,7 @@
   import {Back} from "@element-plus/icons-vue"
   import {reactive, ref} from "vue"
   import { login } from "@/api/admin"
+  import router from "@/router/index.js";
 
   const ruleFormRef = ref()
   const formData = reactive({
@@ -30,6 +31,12 @@
           localStorage.setItem('token', data.token)
           localStorage.setItem('userInfo', JSON.stringify(data.userInfo))
 
+          //根据用户角色决定跳转的路径
+          if (data.userInfo.userType === 2) {
+            router.push('/back/dashboard')
+          } else {
+
+          }
         })
       }
     })
