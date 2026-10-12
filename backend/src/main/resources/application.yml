@@ -1,0 +1,115 @@
+# ==========================================================
+# Spring Boot 配置文件：application.yml
+# 项目：AI 健康咨询平台 - 后端
+#
+# YAML 语法三个要点（新手最容易踩）：
+#   1. 用「缩进」表示层级，缩进相同的属于同一层
+#   2. 只能用空格缩进，绝对不能用 Tab 键
+#   3. 冒号后面必须跟一个空格，例如 port: 8080
+# ==========================================================
+
+# ---------------- 服务端口 ----------------
+server:
+  # 后端服务监听的端口
+  # 前端 vite.config.js 里的代理目标要和这里对上
+  port: 8080
+
+spring:
+  # ---------------- 应用名称 ----------------
+  application:
+    # 应用名，日志和监控中会显示
+    name: ai-health-backend
+
+  # ---------------- 控制台日志颜色 ----------------
+  # 默认值是 detect：让 Spring Boot 自己猜当前终端支不支持彩色，
+  # 猜错的后果就是 VSCode 集成终端里日志一片白（ERROR 也不红）。
+  # 改成 always 就是无条件输出 ANSI 颜色码：ERROR 红、WARN 黄、INFO 绿。
+  #
+  # 注意：只有在「集成终端」里跑才显示颜色。如果看到的是
+  # [31m 这种原样的转义字符，说明输出走的是内部调试控制台，
+  # 那就把 .vscode/launch.json 里的 "console" 保持 "integratedTerminal"。
+  output:
+    ansi:
+      enabled: always
+
+  # ---------------- 数据库连接 ----------------
+  datasource:
+    # MySQL 8 的驱动类
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # 连接地址，拆开看每一段的意思：
+    #   localhost:3306      MySQL 的地址和端口
+    #   ai_health           数据库名，需要你先手动创建
+    #   useUnicode + characterEncoding   告诉驱动用 UTF-8，防止中文乱码
+    #   serverTimezone      指定时区，MySQL 8 不加这个会报时区错误
+    #   useSSL=false        本地开发不需要 SSL 加密连接
+    #   allowPublicKeyRetrieval=true    MySQL 8 默认认证方式下需要，否则可能连不上
+    url: jdbc:mysql://localhost:3306/ai_health?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+
+    # 数据库账号
+    username: root
+
+    # 数据库密码：改成你自己的 MySQL 密码
+    # 如果密码里有特殊符号（# : @ 等），要用单引号包起来，例如 'abc#123'
+    password: 123456
+
+    # 连接池配置（HikariCP，Spring Boot 自带，不用额外加依赖）
+    hikari:
+      # 池子里最多同时保留多少个连接
+      maximum-pool-size: 10
+      # 空闲时至少保留几个连接，避免每次请求都重新建连接
+      minimum-idle: 5
+      # 拿不到连接时最多等待多久（毫秒），超时就抛异常
+      connection-timeout: 30000
+
+  # ---------------- 文件上传限制 ----------------
+  servlet:
+    multipart:
+      # 单个文件最大 5MB，和前端上传封面的限制保持一致
+      max-file-size: 5MB
+      # 整个请求最大 10MB（一个请求可能携带多个文件）
+      max-request-size: 10MB
+
+# ---------------- MyBatis 配置 ----------------
+mybatis:
+  # Mapper XML 文件的位置
+  # classpath 指编译后的 src/main/resources 目录
+  # 所以 XML 要放在 src/main/resources/mapper/ 下面
+  mapper-locations: classpath:mapper/*.xml
+
+  # 实体类所在的包。配置后 XML 里的 resultType 可以只写类名，不用写全限定名
+  type-aliases-package: com.shankong.backend.entity
+
+  configuration:
+    # 开启驼峰命名映射：数据库的 create_time 自动对应 Java 的 createTime
+    # 这是最省事的一项，强烈建议开启，否则每个字段都得手写映射
+    map-underscore-to-camel-case: true
+
+    # 把 MyBatis 执行的 SQL 打印到控制台，方便调试
+    # 开发阶段开着，正式上线前记得去掉
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# ---------------- 日志级别 ----------------
+logging:
+  level:
+    # 全局日志级别
+    root: info
+    # 自己项目的包设为 debug，能看到更详细的运行信息
+    "[com.shankong.backend]": debug
+
+# ---------------- JWT 配置 ----------------
+# 这些值由 config/JwtConfig.java（@Component + @ConfigurationProperties(prefix = "jwt")）
+# 绑定成对象，再由 util/JWTTokenUtil.java 读取；签名库是 auth0 的 com.auth0:java-jwt。
+# header / token-prefix 目前还没有代码消费它们 —— 因为没有 JWT 过滤器，见 SecurityConfig。
+jwt:
+  # 签名密钥（HMAC256）。auth0 的 HMAC256 接受任意长度字符串、不会像 jjwt 那样校验强度，
+  # 但密钥太短等于没加密，上线前务必换成随机长字符串，而且绝对不能提交到 git。
+  secret: ai-health-platform-2026-jwt-secret-key-change-me-before-production
+  # token 有效期，单位毫秒。86400000 = 1 天
+  expiration: 86400000
+  # 刷新 token 有效期，单位毫秒。604800000 = 7 天
+  refresh-expiration: 604800000
+  header: Authorization # token头部名称
+  # 签发者，写进 payload 的 iss 字段，方便以后排查 token 是哪套系统发的
+  token-prefix: "Bearer "
+  issuer: ai-health-backend

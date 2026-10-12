@@ -1,0 +1,397 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AI 健康咨询平台 - 后端接口",
+    "version": "0.1.0",
+    "description": "供 Apifox 导入使用（Apifox → 项目设置 → 导入数据 → OpenAPI/Swagger）。\n\n【重要说明】\n1. 本地后端 http://127.0.0.1:8080 当前只有 1 个接口：POST /api/user/login，且它 return null，所以响应是 HTTP 200 + 空 body（不是 Apifox 的问题）。\n2. 前端 vite.config.js 的 /api 代理指向远程 http://159.75.169.224:1235，那台才是功能完整的后端，下面的远程响应示例都是实测抓到的。\n3. 两台后端的统一响应体不完全一样：本地是 {code,msg,data}；远程多两个字段 {code,msg,data,message,success}。\n4. 除登录外，其余接口在本地代码里都还没写，打过去是 404。\n5. 需要登录态的接口带请求头 token，值用登录接口返回的 data.token。Apifox 里建议在登录接口的「后置操作」里把 data.token 提取到环境变量 token。"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "本地后端（当前只有登录接口）"
+    },
+    {
+      "url": "http://159.75.169.224:1235",
+      "description": "远程后端（前端实际调用的，功能完整）"
+    }
+  ],
+  "tags": [
+    { "name": "用户", "description": "登录、用户信息" },
+    { "name": "知识库-分类", "description": "文章分类" },
+    { "name": "知识库-文章", "description": "文章增删改查、上下线" },
+    { "name": "文件", "description": "图片上传" }
+  ],
+  "security": [{ "tokenAuth": [] }],
+  "paths": {
+    "/api/user/login": {
+      "post": {
+        "tags": ["用户"],
+        "summary": "登录",
+        "description": "**本地已实现（但未写业务逻辑）**，远程已验证可用。\n\n- 本地：`User.login()` 里只有一句 `System.out.println` 然后 `return null`，实测响应 `HTTP 200` + `Content-Length: 0`（空 body）。前端拦截器拿到空 body 会判成失败并弹「请求失败」。\n- 远程：返回 token + userInfo，前端 login.vue 就是按 `data.token` / `data.userInfo.userType` 取值的。\n- 本地校验规则：username 4~100 字符、password 6~50 字符，均不能为空。校验失败时因为项目没有全局异常处理器，返回的是 Spring 默认的 400 错误 JSON（不是 Result 包装）。",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginCommand" },
+              "examples": {
+                "管理员": { "value": { "username": "admin", "password": "123456" } },
+                "普通用户": { "value": { "username": "test", "password": "123456" } },
+                "校验会失败": { "value": { "username": "a", "password": "1" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "本地=空 body；远程=Result 包装（下面示例是远程真实响应，token 已截断）",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RemoteResult" },
+                "examples": {
+                  "远程成功": {
+                    "value": {
+                      "code": "200",
+                      "msg": "登录成功",
+                      "data": {
+                        "userInfo": {
+                          "id": 1,
+                          "username": "admin",
+                          "email": "admin@example.com",
+                          "nickname": "kk",
+                          "avatar": "/files/bussiness/user_avatar/1757687320361.jpg",
+                          "phone": "19999525252",
+                          "gender": 1,
+                          "genderDisplayName": "男",
+                          "birthday": "2019-09-02",
+                          "userType": 2,
+                          "userTypeDisplayName": "管理员",
+                          "status": 1,
+                          "statusDisplayName": "正常",
+                          "displayName": "kk",
+                          "createdAt": "2025-08-30 12:00:01",
+                          "updatedAt": "2026-07-10 10:47:02"
+                        },
+                        "token": "eyJhbGciOiJIUzI1NiJ9.xxx.yyy",
+                        "roleType": "2"
+                      },
+                      "message": "登录成功",
+                      "success": true
+                    }
+                  },
+                  "本地当前实际返回": { "value": "" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数校验失败（Spring 默认错误结构，非 Result 包装）",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SpringDefaultError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/info": {
+      "get": {
+        "tags": ["用户"],
+        "summary": "获取当前登录用户信息（本地未实现）",
+        "description": "本地后端没有这个接口（404）。远程存在该路径，但带 token 直接 GET 实测返回 `{\"code\":\"500\",\"msg\":\"系统错误\"}`，可能还需要其它参数或该接口自身有问题。",
+        "responses": {
+          "200": { "description": "远程实测返回 500 业务码，未取到正确契约" }
+        }
+      }
+    },
+    "/api/knowledge/category/tree": {
+      "get": {
+        "tags": ["知识库-分类"],
+        "summary": "文章分类树（本地未实现）",
+        "description": "本地 404。远程已验证：需要 token 请求头，返回**扁平数组**（虽然叫 tree，实测没有 children 字段）。前端 knowledge.vue 用 `item.id` + `item.categoryName` 渲染下拉框。",
+        "parameters": [
+          { "name": "token", "in": "header", "required": true, "schema": { "type": "string" }, "description": "登录返回的 data.token" }
+        ],
+        "responses": {
+          "200": {
+            "description": "远程真实响应（截断）",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RemoteResult" },
+                "examples": {
+                  "远程成功": {
+                    "value": {
+                      "code": "200",
+                      "msg": "操作成功",
+                      "data": [
+                        {
+                          "id": 4,
+                          "categoryName": "人际关系",
+                          "description": "人际交往和关系处理",
+                          "sortOrder": 10,
+                          "status": 1,
+                          "statusText": "启用",
+                          "articleCount": 396,
+                          "createdAt": "2025-09-04 12:50:03",
+                          "updatedAt": "2025-09-13 11:48:16"
+                        },
+                        {
+                          "id": 3,
+                          "categoryName": "压力缓解",
+                          "description": "压力来源分析和缓解方法",
+                          "sortOrder": 20,
+                          "status": 1,
+                          "statusText": "启用",
+                          "articleCount": 197,
+                          "createdAt": "2025-09-04 12:50:03",
+                          "updatedAt": "2025-09-13 11:48:16"
+                        }
+                      ],
+                      "message": "操作成功",
+                      "success": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knowledge/article/page": {
+      "get": {
+        "tags": ["知识库-文章"],
+        "summary": "文章分页列表（本地未实现）",
+        "description": "本地 404。远程已验证：需要 token 头，返回 `{records, total, ...}` 分页对象。前端传的参数是 `currentPage`/`size`（注意不是 pageNum/pageSize）+ 可选 `title`/`categoryId`/`status`。远程的 `records[].id` 是 **UUID 字符串**，而本项目 sql/ai_health.sql 里定义的是 BIGINT 自增主键，两边不一致。",
+        "parameters": [
+          { "name": "token", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "currentPage", "in": "query", "schema": { "type": "integer", "default": 1 }, "description": "页码，从 1 开始" },
+          { "name": "size", "in": "query", "schema": { "type": "integer", "default": 10 }, "description": "每页条数" },
+          { "name": "title", "in": "query", "schema": { "type": "string" }, "description": "标题模糊查询" },
+          { "name": "categoryId", "in": "query", "schema": { "type": "integer" }, "description": "分类 id" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["0", "1", "2"] }, "description": "0=草稿，1=已发布，2=已下线" }
+        ],
+        "responses": {
+          "200": {
+            "description": "远程真实响应（截断）",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RemoteResult" },
+                "examples": {
+                  "远程成功": {
+                    "value": {
+                      "code": "200",
+                      "msg": "操作成功",
+                      "data": {
+                        "records": [
+                          {
+                            "id": "1b10d0e0-1e21-4363-9b17-68a2cc10026d",
+                            "categoryId": 4,
+                            "categoryName": "人际关系",
+                            "title": "111人格：总委屈自己成全别人，如何改变1",
+                            "summary": "讨好不是天生的好脾气，而是童年学会的生存策略。",
+                            "tags": "讨好型人格,自我关怀,表达需求",
+                            "authorName": "jie",
+                            "readCount": 0,
+                            "status": 2,
+                            "statusText": "已下线",
+                            "isFavorited": false,
+                            "favoriteCount": 0,
+                            "publishedAt": "2026-08-26 01:14:04"
+                          }
+                        ],
+                        "total": 0,
+                        "currentPage": 1,
+                        "size": 2
+                      },
+                      "message": "操作成功",
+                      "success": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knowledge/article/{id}": {
+      "get": {
+        "tags": ["知识库-文章"],
+        "summary": "文章详情（本地未实现）",
+        "description": "本地 404。远程未逐一验证，契约请以实际返回为准。",
+        "parameters": [
+          { "name": "token", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "文章 id（远程为 UUID，本地 sql 设计为数字）" }
+        ],
+        "responses": { "200": { "description": "Result<文章详情>" }, "404": { "description": "本地未实现" } }
+      },
+      "put": {
+        "tags": ["知识库-文章"],
+        "summary": "修改文章（本地未实现）",
+        "description": "本地 404。前端 api/admin.js 里就是 `PUT /knowledge/article/{id}`，id 同时也在 body 里。",
+        "parameters": [
+          { "name": "token", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ArticleSaveCommand" } }
+          }
+        },
+        "responses": { "200": { "description": "Result" }, "404": { "description": "本地未实现" } }
+      }
+    },
+    "/api/knowledge/article/{id}/status": {
+      "put": {
+        "tags": ["知识库-文章"],
+        "summary": "文章发布/下线（本地未实现）",
+        "description": "本地 404。前端 changeArticleStatus(id, data) 调用，body 传目标状态。",
+        "parameters": [
+          { "name": "token", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "status": { "type": "integer", "enum": [0, 1, 2], "description": "0=草稿，1=已发布，2=已下线" } }
+              },
+              "examples": { "发布": { "value": { "status": 1 } }, "下线": { "value": { "status": 2 } } }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Result" }, "404": { "description": "本地未实现" } }
+      }
+    },
+    "/api/knowledge/article": {
+      "post": {
+        "tags": ["知识库-文章"],
+        "summary": "新增文章（本地未实现）",
+        "description": "本地 404。字段取自前端 ArticleDialog.vue 的 formData。tags 是逗号分隔的字符串（前端提交前把 tagArray join(\",\")）。",
+        "parameters": [
+          { "name": "token", "in": "header", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ArticleSaveCommand" },
+              "examples": {
+                "示例": {
+                  "value": {
+                    "title": "总是焦虑怎么办？试试这 5 个方法",
+                    "categoryId": 2,
+                    "summary": "焦虑本身不是坏事。",
+                    "content": "<p>正文 HTML</p>",
+                    "coverImage": "/upload/xxx.png",
+                    "tags": "焦虑,情绪管理",
+                    "status": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Result" }, "404": { "description": "本地未实现" } }
+      }
+    },
+    "/api/file/upload": {
+      "post": {
+        "tags": ["文件"],
+        "summary": "图片上传（本地未实现）",
+        "description": "本地 404。multipart/form-data，前端固定传 businessType=ARTICLE、businessId=UUID、businessField=cover|content。返回的 filePath 要和前端 `fileBaseUrl`（http://159.75.169.224:1235）拼成完整图片地址。sql/ai_health.sql 里注释的返回字段名是 `filePath`。",
+        "parameters": [
+          { "name": "token", "in": "header", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "图片，≤5MB，仅图片类型" },
+                  "businessType": { "type": "string", "default": "ARTICLE" },
+                  "businessId": { "type": "string", "description": "前端生成的 UUID" },
+                  "businessField": { "type": "string", "enum": ["cover", "content"], "default": "cover" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Result<{filePath}>" }, "404": { "description": "本地未实现" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "tokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "token",
+        "description": "登录接口返回的 data.token，前端 axios 拦截器就是往 header 里塞 token"
+      }
+    },
+    "schemas": {
+      "LoginCommand": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string", "minLength": 4, "maxLength": 100, "description": "用户名或邮箱，@NotBlank @Size(4,100)" },
+          "password": { "type": "string", "minLength": 6, "maxLength": 50, "description": "密码，@NotBlank @Size(6,50)" }
+        }
+      },
+      "Result": {
+        "type": "object",
+        "description": "本地统一响应体 com.shankong.backend.common.Result",
+        "properties": {
+          "code": { "type": "string", "example": "200", "description": "见 ResultCode：200 成功 / -1 失败 / 400 参数错误 / 401 未登录 / 500 系统错误" },
+          "msg": { "type": "string", "example": "操作成功" },
+          "data": { "nullable": true }
+        }
+      },
+      "RemoteResult": {
+        "type": "object",
+        "description": "远程后端统一响应体，比本地多 message 和 success 两个字段",
+        "properties": {
+          "code": { "type": "string", "example": "200" },
+          "msg": { "type": "string", "example": "操作成功" },
+          "data": { "nullable": true },
+          "message": { "type": "string", "example": "操作成功" },
+          "success": { "type": "boolean", "example": true }
+        }
+      },
+      "ArticleSaveCommand": {
+        "type": "object",
+        "required": ["title", "categoryId", "status"],
+        "properties": {
+          "id": { "type": "string", "description": "编辑时带，新增时不传" },
+          "title": { "type": "string", "maxLength": 200 },
+          "categoryId": { "type": "integer" },
+          "summary": { "type": "string", "maxLength": 1000 },
+          "content": { "type": "string", "description": "富文本 HTML" },
+          "coverImage": { "type": "string", "description": "相对路径，来自上传接口返回的 filePath" },
+          "tags": { "type": "string", "description": "逗号分隔，如 焦虑,情绪管理" },
+          "status": { "type": "integer", "enum": [0, 1, 2], "description": "0=草稿，1=已发布，2=已下线" }
+        }
+      },
+      "SpringDefaultError": {
+        "type": "object",
+        "description": "本地项目没有 @RestControllerAdvice，参数校验失败/404 返回的是 Spring 默认错误结构",
+        "properties": {
+          "timestamp": { "type": "string" },
+          "status": { "type": "integer", "example": 400 },
+          "error": { "type": "string", "example": "Bad Request" },
+          "message": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    }
+  }
+}

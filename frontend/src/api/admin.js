@@ -17,7 +17,9 @@ export function uploadFile(file, businessInfo) {
   formData.append("file", file);
   formData.append("businessType", "ARTICLE");
   formData.append("businessId", businessInfo.businessId);
-  formData.append("businessField", "cover");
+  // businessField 交给调用方决定：封面传 cover，正文插图传 content。
+  // 原来写死成 cover，富文本正文里插的图也会被登记成封面
+  formData.append("businessField", businessInfo.businessField || "cover");
   return service.post("/file/upload", formData, {
     headers: {
       "Content-Type": "multipart/form-data",

@@ -1,0 +1,25 @@
+{
+  // ==========================================================
+  // 调试/启动配置。放在这里之后，按 F5 就能直接启动后端
+  // 前提：Java 插件已经成功把 backend/pom.xml 导入成项目
+  //      （如果 BackendApplication.java 还报 non-project，先按上一条消息清缓存）
+  // ==========================================================
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "启动后端 (BackendApplication)",
+      "request": "launch",
+      // 启动入口类，必须写全限定名
+      "mainClass": "com.shankong.backend.BackendApplication",
+      // Maven 的 artifactId，JDT 里项目名就是它
+      "projectName": "backend",
+      // 用集成终端跑：Spring Boot 的彩色日志能正常显示，
+      // 用默认的「内部调试控制台」中文容易乱码
+      "console": "integratedTerminal",
+      // Java 17 默认跟系统编码走（你这台机器是 GBK），
+      // 强制 UTF-8，避免日志里的中文变成问号
+      "vmArgs": "-Dfile.encoding=UTF-8"
+    }
+  ]
+}

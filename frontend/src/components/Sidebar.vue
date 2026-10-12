@@ -2,6 +2,7 @@
   import router from "@/router/index.js";
   import { useAdminStore } from '@/stores/admin.js'
   import {computed} from "vue";
+  import { useRoute } from "vue-router";
 
   const handleOpen = () => {}
   const handleClose = () => {}
@@ -13,6 +14,11 @@
   }
 
   const isCollapse = computed(() => useAdminStore().isCollapse)
+
+  // 菜单高亮要跟着当前路由走。
+  // 原来 default-active 写死成 "2"，进哪个页面高亮都对不上
+  const route = useRoute()
+  const activeMenu = computed(() => route.path.split('/').pop())
 </script>
 
 <template>
@@ -20,7 +26,7 @@
     <el-menu
         :collapse="isCollapse"
         :collapse-transition="false"
-        default-active="2"
+        :default-active="activeMenu"
         class="menu-style"
         @open="handleOpen"
         @close="handleClose"

@@ -40,7 +40,7 @@ const dialogVisible = computed({
 const rules = {
   title: [{ required: true, message: "请输入文章标题", trigger: "blur" }],
   categoryId: [{ required: true, message: "请选择分类", trigger: "change" }],
-  status: [{ required: true, message: "请输入文章内容", trigger: "blur" }],
+  status: [{ required: true, message: "请选择文章状态", trigger: "change" }],
   content: [{ max: 5000, message: "文章内容最多5000字", trigger: "blur" }],
 };
 
@@ -276,7 +276,9 @@ const handleSubmit = async () => {
           :rows="4"
         ></el-input>
       </el-form-item>
-      <el-form-item label="文章标签" prop="content">
+      <!-- prop 原来写成 content，和下面的正文项重名了，
+           校验和 resetFields 都会串到正文上，这里改成实际绑定的 tagArray -->
+      <el-form-item label="文章标签" prop="tagArray">
         <el-select
           v-model="formData.tagArray"
           placeholder="请输入文章标签"

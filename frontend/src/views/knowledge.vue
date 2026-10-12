@@ -5,9 +5,11 @@ import TableSearch from "@/components/TableSearch.vue";
 import { categoryTree, articlePage, getArticleDetail, changeArticleStatus } from "@/api/admin";
 import { Timer } from "@element-plus/icons-vue";
 import ArticleDialog from "@/components/ArticleDialog.vue";
-import { ElMessageBox } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 
-const formItem = [
+// formItem 必须是响应式的：分类选项是接口回来以后才填进 formItem[1].options 的，
+// 普通数组改了不会触发 TableSearch 重新渲染，分类下拉框会一直是空的
+const formItem = reactive([
   {
     comp: "input",
     label: "文章标题",
@@ -40,7 +42,7 @@ const formItem = [
       },
     ],
   },
-];
+]);
 
 //分页参数
 const pagination = reactive({
@@ -48,12 +50,21 @@ const pagination = reactive({
   size: 10,
   total: 0,
 });
+// 上一次的查询条件。翻页时不能再传一遍，但也不能丢，
+// 否则从第 2 页开始筛选就失效了
+const lastSearchParams = ref({});
+
 const handleSearch = async (formData) => {
-  console.log(formData, "查询参数");
+  // 点"查询/重置"时 TableSearch 会传 formData；翻页时传的是 undefined，沿用上次条件
+  if (formData) {
+    lastSearchParams.value = formData;
+    // 换了查询条件就回第一页，否则可能停在超出结果的页码上
+    pagination.currentPage = 1;
+  }
 
   const paras = {
     ...pagination,
-    ...formData,
+    ...lastSearchParams.value,
   };
 
   const { records, total } = await articlePage(paras);
@@ -124,10 +135,9 @@ const handlePublish = (row) => {
     cancelButtonText: "取消",
     type: "warning",
   }).then(() => {
-    updateArticle({
-      id: row.id,
-      status: 1,
-    }).then(() => {
+    // 发布就是改状态，用专门的接口。
+    // 这里原来调用的是 updateArticle，但那个方法根本没 import，一点"发布"就报错
+    changeArticleStatus(row.id, { status: 1 }).then(() => {
       ElMessage.success("发布成功");
       handleSearch();
     });
@@ -196,10 +206,11 @@ const handleOffline = (row) => {
     </el-table>
     <el-pagination
       style="margin-top: 25px"
+      v-model:current-page="pagination.currentPage"
       :page-size="pagination.size"
       layout="prev, pager, next"
       :total="pagination.total"
-      @change="handleChange"
+      @current-change="handleChange"
     />
     <ArticleDialog
       v-model:modelValue="dialogVisible"

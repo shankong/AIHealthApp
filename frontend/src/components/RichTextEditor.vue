@@ -122,7 +122,8 @@ const customUploadImage = async (file, insertFn) => {
   try {
     // 后端需要一个 businessId，生成 UUID 作为本次上传的业务标识
     const businessId = crypto.randomUUID();
-    const res = await uploadFile(file, { businessId });
+    // 正文插图要标成 content，否则会被当成封面
+    const res = await uploadFile(file, { businessId, businessField: "content" });
 
     // 防御一下：万一后端没返回 filePath，早点报错，
     // 否则会拼出 http://xxx/undefined 这种地址，图片静默不显示
