@@ -93,7 +93,7 @@ MyBatis-Plus 的 `selectOne` 会生成**实体全字段**的 SELECT，所以实�
 
 | 接口 | 状态 |
 |---|---|
-| `POST /api/user/login` | **进行中**。已能按「用户名或邮箱」查库（`BusinessException("用户不存在")`）、BCrypt 校验密码（`"密码错误"`）、`user.isActive()` 判禁用（`"用户已被禁用，请联系管理员"`）、`JWTTokenUtil.generateToken(...)` 签发 token —— 但**成功分支末尾还是 `return null`**（`UserService.java` 第 60 行），所以组装 DTO 之前，成功登录仍然是 **HTTP 200 + 空 body**。`Login` 返回空响应 = service 返回了 null，这是当前控制器的特征 |
+| `POST /api/user/login` | **已完成**（2026-10-12 在隔离的 8081 实例上端到端验证过）。按「用户名或邮箱」查库（`BusinessException("用户不存在")`）、BCrypt 校验密码（`"密码错误"`）、`user.isActive()` 判禁用（`"用户已被禁用，请联系管理员"`）、`JWTTokenUtil.generateToken(...)` 签发 token、`service/convert/UserConvert.java` 组装 DTO，`controller/User.java` 用 `Result.success(...)` 包一层。<br>实测 `admin/123456` → `{"code":"200","msg":"操作成功","data":{"token":"…（264 字符）","roleType":"2","userInfo":{…}}}`；`userInfo` 里 `nickname`/`displayName` 都是「超级管理员」，`userTypeDisplayName`=管理员、`statusDisplayName`=正常、`genderDisplayName`=男、`birthday`=`2019-09-02` |
 
 登录请求体（`UserLoginCommandDTO`，`@Valid` 校验）：`username` 4~100 位、`password` 6~50 位，都不能为空。
 
@@ -115,9 +115,9 @@ MyBatis-Plus 的 `selectOne` 会生成**实体全字段**的 SELECT，所以实�
 | 响应体外层 | `{code,msg,data}` | 多 `message`、`success` 两个字段 |
 | 用户主键 | `VARCHAR(32)` UUID（已对齐） | UUID 字符串 |
 | 文章主键 | `BIGINT` 自增 | **UUID 字符串** |
-| 登录返回 | 计划 `{token, roleType, userInfo}` | `userInfo` 含 `gender`/`birthday`/`displayName`/`xxxDisplayName` 等 |
+| 登录返回 | **已实现** `{token, roleType, userInfo}`，`userInfo` 含 `gender`/`birthday`/`displayName`/`xxxDisplayName`/`status`/`createdAt`（字段与远程基本一致，已能直接用） | 同左 |
 | 分类接口 | 未实现 | 返回**扁平数组**（叫 tree 但没有 children） |
-| 时间格式 | — | `"2025-08-30 12:00:01"` |
+| 时间格式 | `LocalDateTime` 直接序列化成 **`"2026-09-30T14:58:27"`**（带 `T`，还没配 Jackson 的日期格式） | `"2025-08-30 12:00:01"` |
 
 ### 安全配置（`config/SecurityConfig.java`）
 
@@ -167,8 +167,9 @@ CSRF 关闭、`STATELESS`。
     `{"code":"500","msg":"系统错误"}`，加了之后返回 `{"code":"400","msg":"参数错误"}`。
     用 curl 复现时注意 **Windows PowerShell 5.1 会把 `-d '{...}'` 里的双引号吃掉**，发出去的是非法 JSON，
     于是自己造出一个 500 还以为是后端坏了 —— 要用 `-d "@body.json"` 传文件。
-12. **成功登录现在返回的是「HTTP 200 + 空 body」**（`UserService.login` 末尾 `return null`），
-    这是「组装 DTO 还没写」的特征，不是错误；前端 `requst.js` 会因为 code 不是 200 而弹「请求失败」。
+12. **「HTTP 200 + 空 body」是 service 成功分支漏了 `return`（返回了 `null`）**，不是后端崩溃。
+    `UserService.login` 曾经就是这样（末尾 `return null`），2026-10-12 已补完 DTO 组装并验证通过。
+    以后某个接口拿不到 `code`、前端弹「请求失败」而控制台又没异常时，先看 service 是不是走到底没返回值。
 
 ## 7. 现有代码约定
 
@@ -176,6 +177,12 @@ CSRF 关闭、`STATELESS`。
   `401` 未登录、`500` 系统错误、`6001~6004` 业务错误、`A02xx` token 相关）
 - 分层：`controller` → `service` → `mapper`（MyBatis-Plus `BaseMapper`），
   入参 DTO 放 `DTO/command`，出参 DTO 放 `DTO/response`，实体放 `entity`
+- **service 返回业务 DTO，controller 用 `Result.success(...)` 包**：
+  `controller/User.java` 里是 `UserLoginResponseDTO result = userService.login(commandDTO); return Result.success(result);`。
+  别反过来让 service 返回 `Result`、controller 再 `Result.success(result.getData())`（见坑 2）
+- 实体 → 出参 DTO 的转换集中在 `service/convert/`（例：`UserConvert.entityToLoginResponse` /
+  `entityToDetailResponse`），出参 DTO 用 lombok `@Builder` + 内部类组织
+  （`UserLoginResponseDTO.UserDetailResponseDTO`）
 - 业务失败抛 `exception/BusinessException`，由 `common/GlobalExceptionHandler.java` 统一转成 `Result`
   （**它在 `common/` 包，早期在 `exception/`，已搬走**）
 - 业务失败**不改变 HTTP 状态码**（仍然 200），由响应体里的 `code` 表达 —— 前端拦截器就是按 `code` 判断的
